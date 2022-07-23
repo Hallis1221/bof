@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:graphql/client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:html' as html;
 
-final GraphQLClient client = GraphQLClient(
-  cache: GraphQLCache(),
-  link: HttpLink("https://api.bucketofcrabs.net/graphql"),
-);
+import 'graphql/client.dart';
+import 'types/job.dart';
 
 void main() {
   runApp(const MyApp());
@@ -48,22 +45,17 @@ class JobList extends StatelessWidget {
       child: FutureBuilder<QueryResult>(
           future: fetchJobs(client),
           builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
+            if (snapshot.connectionState != ConnectionState.done ||
+                snapshot.hasError ||
+                !snapshot.hasData) {
               return const Text("Loading...");
             }
 
             List jobsRaw = snapshot.data?.data!['getJobPreviews']['jobs'];
 
             List<Job> jobs = jobsRaw.map((job) {
-              print("\n  JOB: ${job!['jobId']} \n \n");
-              return (Job(
-                id: job!['jobId'],
-                createdAt: job!['createdAt'],
-                location: job!['location'],
-                title: job!['title'],
-                onsiteOnly: job!['onsiteOnly'],
-                remoteOnly: job!['remoteOnly'],
-              ));
+              print(job);
+              return Job.fromJson(job);
             }).toList();
 
             List<JobOverviewWidget> jobWidgets = jobs.map((job) {
@@ -92,15 +84,12 @@ class JobOverviewWidget extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.all(8.0),
         child: MaterialButton(
-          onPressed: (() => kIsWeb
-              ? html.window
-                  .open("https://bucketofcrabs.net/jobs/${job.id}", "name")
-              : launchUrl(
-                  Uri(
-                      scheme: 'https',
-                      host: 'www.bucketofcrabs.net',
-                      path: 'jobs/${job.id}'),
-                )),
+          onPressed: (() => launchUrl(
+                Uri(
+                    scheme: 'https',
+                    host: 'www.bucketofcrabs.net',
+                    path: 'jobs/${job.id}'),
+              )),
           child: Card(
             child: Padding(
               padding: const EdgeInsets.all(25.0),
@@ -119,32 +108,12 @@ class JobOverviewWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text(job.location),
-                  Text(job.createdAt),
                 ],
               ),
             ),
           ),
         ),
       );
-}
-
-class Job {
-  String id;
-  String title;
-  String location;
-  bool remoteOnly;
-  bool onsiteOnly;
-  String createdAt;
-
-  Job({
-    required this.title,
-    required this.location,
-    required this.remoteOnly,
-    required this.onsiteOnly,
-    required this.createdAt,
-    required this.id,
-  });
 }
 
 Future<QueryResult> fetchJobs(GraphQLClient client) async {
