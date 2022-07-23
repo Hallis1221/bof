@@ -74,17 +74,23 @@ class TempJob extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-        title: Text(job.title),
-        subtitle: Text(job.company.name),
-        trailing: Text(job.location),
-        onTap: () {
-          final Uri url = Uri.parse("https://bucketofcrabs.net/jobs/${job.id}");
-          launchUrl(url).then((value) {
-            if (!value) {
-              throw Exception('Could not launch $url');
-            }
-          });
-        });
+    return FutureBuilder(
+        future: job.getPayRange(job.id),
+        builder: (context, snapshot) => ListTile(
+            title: Text(job.title),
+            subtitle: Text(job.company.name),
+            trailing: Text(snapshot.data?.toString() ?? 'N/A'),
+            onTap: () {
+              final Uri url =
+                  Uri.parse("https://bucketofcrabs.net/jobs/${job.id}");
+              launchUrl(
+                url,
+                mode: LaunchMode.inAppWebView,
+              ).then((value) {
+                if (!value) {
+                  throw Exception('Could not launch $url');
+                }
+              });
+            }));
   }
 }

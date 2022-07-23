@@ -18,7 +18,8 @@ class Job {
   final List<Bucket> buckets;
   final List<Game> games;
 
-  late Future<JobDetails> jobDetails = _getJobDetails(id);
+  late Future<JobDetails> jobDetails = getJobDetails(id);
+  late Future<String> payRange = getPayRange(id);
 
   factory Job.fromJson(Map<dynamic, dynamic> json) => Job(
         id: json["jobId"] as String,
@@ -58,7 +59,7 @@ class Job {
 
   // We can get the details of a job by querying the API with the job ID.
 
-  Future<JobDetails> _getJobDetails(String jobId) {
+  Future<JobDetails> getJobDetails(String jobId) {
     const String query = r'''
  query OpenJob($jobId: String!) {
   openJob(jobId: $jobId) {
@@ -127,6 +128,58 @@ class Job {
     );
     return client.query(options).then((QueryResult result) {
       return JobDetails.fromJson(result.data!["openJob"], this);
+    });
+  }
+
+  Future<String> getPayRange(String jobId) {
+    const String query = r'''
+    query OpenJob($jobId: String!) {
+      openJob(jobId: $jobId) {
+        hourlyrate
+      }
+    }
+''';
+
+    final QueryOptions options = QueryOptions(
+      document: gql(query),
+      variables: <String, dynamic>{
+        "jobId": jobId,
+      },
+    );
+    return client.query(options).then((QueryResult result) {
+      var rate = (result.data!["openJob"]["hourlyrate"]).toString();
+      print(rate);
+
+      if (rate.length < 15) {
+        return rate;
+      }
+      if (rate.contains("(")) {
+        rate.substring(0, rate.indexOf("(")).substring(0, 15);
+      }
+      if (rate.contains(",")) {
+        rate.substring(0, rate.indexOf(",")).substring(0, 15);
+      }
+
+      if (rate.toLowerCase().contains("volunteer") ||
+          rate.toLowerCase().contains("advertising")) {
+        return "Volunteer";
+      }
+
+      if (rate.contains("%") || rate.toLowerCase().contains("percentage")) {
+        return "Royalty";
+      }
+      if (rate.toLowerCase().contains("per hour") ||
+          rate.toLowerCase().contains("/hr") ||
+          rate.toLowerCase().contains("/hour")) {
+        return "${rate.substring(0, rate.indexOf("/"))}/hr";
+      }
+
+      // if rate contains $, remove everything that is not a $, a number or a -
+      if (rate.contains('\$')) {
+        return rate.replaceAll(RegExp("[^\\\$0-9-]"), "");
+      }
+
+      return rate.split(" ")[0];
     });
   }
 
