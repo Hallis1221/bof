@@ -20,7 +20,7 @@ class Job {
 
   late Future<JobDetails> jobDetails = _getJobDetails(id);
 
-  factory Job.fromJson(Map<String, dynamic> json) => Job(
+  factory Job.fromJson(Map<dynamic, dynamic> json) => Job(
         id: json["jobId"] as String,
         company: Company.fromJson(json["company"]),
         title: json["title"] as String,
@@ -38,7 +38,7 @@ class Job {
         games: List<Game>.from(json["games"].map((x) => Game.fromJson(x))),
       );
 
-  Map<String, dynamic> toJson() => {
+  Map<dynamic, dynamic> toJson() => {
         "jobId": id,
         "company": company.toJson(),
         "title": title,
