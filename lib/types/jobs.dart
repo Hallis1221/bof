@@ -7,6 +7,80 @@ import 'package:rxdart/rxdart.dart';
 
 import 'bucket.dart';
 
+CurrentBuckets currentBuckets = CurrentBuckets();
+JobStream jobStream = JobStream();
+
+class JobStream {
+  final BehaviorSubject<List<Job>> _jobs = BehaviorSubject<List<Job>>();
+  final BehaviorSubject<bool> _isLoading = BehaviorSubject<bool>();
+  final BehaviorSubject<bool> _hasMore = BehaviorSubject<bool>();
+
+  Stream<List<Job>> get jobs => _jobs.stream;
+  Stream<bool> get isLoading => _isLoading.stream;
+
+  bool get hasMore => _hasMore.stream.value;
+
+  removeAllJobs() {
+    _jobs.value.clear();
+  }
+
+  // set flipHasMore(bool value) => _hasMore..add(!_hasMore.value);
+
+  JobStream() {
+    _isLoading.add(false);
+    _jobs.add([]);
+    _hasMore.add(true);
+    refresh();
+  }
+
+  Future<void> refresh() {
+    return loadMore(clearCachedData: true);
+  }
+
+  Future<void> loadMore({bool clearCachedData = false}) {
+    if (clearCachedData) {
+      _hasMore.add(true);
+    }
+
+    if (_isLoading.value || !_hasMore.value) {
+      return Future.value();
+    }
+
+    _isLoading.add(true);
+
+    return _fetchJobs(
+      10,
+      currentBuckets.buckets,
+    ).then((List<Job> jobsData) {
+      _isLoading.add(false);
+      _jobs.add(_jobs.value..addAll(jobsData));
+      _hasMore.add(jobsData.length == 10);
+    });
+  }
+}
+
+class CurrentBuckets {
+  final BehaviorSubject<List<Bucket>> _buckets =
+      BehaviorSubject<List<Bucket>>.seeded([]);
+
+  Stream get stream$ => _buckets.stream;
+
+  List<Bucket> get buckets => _buckets.value;
+  Future<List<Bucket>> get possibleBuckets async =>
+      await _fetchPossibleBuckets();
+
+  addBucket(Bucket bucket) {
+    final List<Bucket> newBuckets = List.from(_buckets.value)..add(bucket);
+    _buckets.add(newBuckets);
+  }
+
+  removeBucket(Bucket bucket) {
+    final List<Bucket> newBuckets = List.from(_buckets.value)
+      ..removeWhere((Bucket b) => b.name == bucket.name);
+    _buckets.add(newBuckets);
+  }
+}
+
 Future<List<Job>> _fetchJobs(int length, List<Bucket> buckets) async {
   const String query = r'''
   query GetJobPreviews($amount: Int!, $offset: Int!, $filter: GetJobsFilterInput) {
@@ -67,57 +141,23 @@ Future<List<Job>> _fetchJobs(int length, List<Bucket> buckets) async {
   return jobs.map((e) => Job.fromJson(e)).toList();
 }
 
-class JobStream {
-  final BehaviorSubject<List<Job>> _jobs = BehaviorSubject<List<Job>>();
-  final BehaviorSubject<bool> _isLoading = BehaviorSubject<bool>();
-  final BehaviorSubject<bool> _hasMore = BehaviorSubject<bool>();
-
-  Stream<List<Job>> get jobs => _jobs.stream;
-  Stream<bool> get isLoading => _isLoading.stream;
-
-  bool get hasMore => _hasMore.stream.value;
-
-  // set flipHasMore(bool value) => _hasMore..add(!_hasMore.value);
-
-  JobStream() {
-    _isLoading.add(false);
-    _jobs.add([]);
-    _hasMore.add(true);
-    refresh();
-  }
-
-  Future<void> refresh() {
-    return loadMore(clearCachedData: true);
-  }
-
-  Future<void> loadMore({bool clearCachedData = false}) {
-    if (clearCachedData) {
-      _hasMore.add(true);
-    }
-
-    if (_isLoading.value || !_hasMore.value) {
-      return Future.value();
-    }
-
-    _isLoading.add(true);
-
-    return _fetchJobs(10, []).then((List<Job> jobsData) {
-      _isLoading.add(false);
-      _jobs.add(_jobs.value..addAll(jobsData));
-      _hasMore.add(jobsData.length == 10);
-    });
+Future<List<Bucket>> _fetchPossibleBuckets() async {
+  const String query = r'''
+ query GetAvailableBuckets {
+  getAvailableBuckets {
+    id
+    name
+    isArchived
+    __typename
   }
 }
 
-class CurrentBuckets {
-  final BehaviorSubject<List<Bucket>> _buckets =
-      BehaviorSubject<List<Bucket>>.seeded([]);
 
-  Stream get stream$ => _buckets.stream;
-  List<Bucket> get buckets => _buckets.value;
+''';
 
-  addBucket(Bucket bucket) {
-    final List<Bucket> newBuckets = List.from(_buckets.value)..add(bucket);
-    _buckets.add(newBuckets);
-  }
+  final QueryResult queryResult = await client.query(QueryOptions(
+    document: gql(query),
+  ));
+  List buckets = queryResult.data!["getAvailableBuckets"];
+  return buckets.map((e) => Bucket.fromJson(e)).toList();
 }

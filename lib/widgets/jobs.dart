@@ -1,7 +1,6 @@
 import 'package:bof/types/job.dart';
 import 'package:bof/types/jobs.dart';
 import 'package:flutter/material.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class JobList extends StatefulWidget {
@@ -15,10 +14,6 @@ class JobList extends StatefulWidget {
 
 class JobListState extends State<JobList> {
   final scrollController = ScrollController();
-  RefreshController _refreshController =
-      RefreshController(initialRefresh: false);
-
-  late JobStream jobStream;
 
   @override
   void initState() {
@@ -40,8 +35,7 @@ class JobListState extends State<JobList> {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         } else {
-          return SmartRefresher(
-            controller: _refreshController,
+          return RefreshIndicator(
             onRefresh: jobStream.refresh,
             child: ListView.separated(
               shrinkWrap: true,
