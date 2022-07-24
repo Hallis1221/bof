@@ -1,6 +1,7 @@
 import 'package:bof/types/job.dart';
 import 'package:bof/types/jobs.dart';
 import 'package:flutter/material.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class JobList extends StatefulWidget {
@@ -14,15 +15,18 @@ class JobList extends StatefulWidget {
 
 class JobListState extends State<JobList> {
   final scrollController = ScrollController();
-  late JobsStream jobs;
+  RefreshController _refreshController =
+      RefreshController(initialRefresh: false);
+
+  late JobStream jobStream;
 
   @override
   void initState() {
-    jobs = JobsStream();
+    jobStream = JobStream();
     scrollController.addListener(() {
       if (scrollController.position.maxScrollExtent ==
           scrollController.offset) {
-        jobs.loadMore();
+        jobStream.loadMore();
       }
     });
     super.initState();
@@ -31,14 +35,16 @@ class JobListState extends State<JobList> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: jobs.stream,
+      stream: jobStream.jobs,
       builder: (BuildContext context, AsyncSnapshot snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         } else {
-          return RefreshIndicator(
-            onRefresh: jobs.refresh,
+          return SmartRefresher(
+            controller: _refreshController,
+            onRefresh: jobStream.refresh,
             child: ListView.separated(
+              shrinkWrap: true,
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               controller: scrollController,
               separatorBuilder: (context, index) => const Divider(),
@@ -47,7 +53,7 @@ class JobListState extends State<JobList> {
                 if (index < snapshot.data.length) {
                   // return Post(post: snapshot.data[index]);
                   return TempJob(job: snapshot.data[index]);
-                } else if (jobs.hasMore) {
+                } else if (jobStream.hasMore) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 32.0),
                     child: Center(child: CircularProgressIndicator()),
@@ -75,22 +81,43 @@ class TempJob extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-        future: job.getPayRange(job.id),
-        builder: (context, snapshot) => ListTile(
-            title: Text(job.title),
-            subtitle: Text(job.company.name),
-            trailing: Text(snapshot.data?.toString() ?? 'N/A'),
-            onTap: () {
-              final Uri url =
-                  Uri.parse("https://bucketofcrabs.net/jobs/${job.id}");
-              launchUrl(
-                url,
-                mode: LaunchMode.inAppWebView,
-              ).then((value) {
+      future: job.getPayRange(job.id),
+      builder: (context, snapshot) {
+        final payrangeSnack =
+            SnackBar(content: Text(snapshot.data?.toString() ?? 'N/A'));
+
+        return ListTile(
+          title: Text(
+            job.title,
+          ),
+          subtitle: Text(job.company.name),
+          trailing: SizedBox(
+            width: 130.0,
+            child: Text(
+              snapshot.data?.toString() ?? 'N/A',
+              softWrap: false,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          onLongPress: () =>
+              ScaffoldMessenger.of(context).showSnackBar(payrangeSnack),
+          onTap: () {
+            final Uri url =
+                Uri.parse("https://bucketofcrabs.net/jobs/${job.id}");
+            launchUrl(
+              url,
+              mode: LaunchMode.inAppWebView,
+            ).then(
+              (value) {
                 if (!value) {
                   throw Exception('Could not launch $url');
                 }
-              });
-            }));
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }

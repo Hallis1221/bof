@@ -3,54 +3,11 @@ import 'dart:async';
 import 'package:bof/graphql/client.dart';
 import 'package:bof/types/job.dart';
 import 'package:graphql/client.dart';
+import 'package:rxdart/rxdart.dart';
 
-class JobsStream {
-  Stream<List<Job>> stream = const Stream.empty();
-  bool hasMore = true;
+import 'bucket.dart';
 
-  bool _isLoading = false;
-  List<Map> _data = [];
-  StreamController<List<Map>> _controller = StreamController<List<Map>>();
-
-  JobsStream() {
-    _data = <Map>[];
-    _controller = StreamController<List<Map>>.broadcast();
-    _isLoading = false;
-    stream = _controller.stream.map((List<Map> postsData) {
-      return postsData.map((Map postData) {
-        return Job.fromJson(postData);
-      }).toList();
-    });
-    hasMore = true;
-    refresh();
-  }
-
-  Future<void> refresh() {
-    return loadMore(clearCachedData: true);
-  }
-
-  Future<void> loadMore({bool clearCachedData = false}) {
-    if (clearCachedData) {
-      _data = <Map>[];
-      hasMore = true;
-    }
-
-    if (_isLoading || !hasMore) {
-      return Future.value();
-    }
-
-    _isLoading = true;
-
-    return _fetchJobs(10).then((postsData) {
-      _isLoading = false;
-      _data.addAll(postsData);
-      hasMore = (postsData.length == 10);
-      _controller.add(_data);
-    });
-  }
-}
-
-Future<List<Map<dynamic, dynamic>>> _fetchJobs(int length) async {
+Future<List<Job>> _fetchJobs(int length, List<Bucket> buckets) async {
   const String query = r'''
   query GetJobPreviews($amount: Int!, $offset: Int!, $filter: GetJobsFilterInput) {
     getJobPreviews(amount: $amount, offset: $offset, filter: $filter) {
@@ -88,25 +45,79 @@ Future<List<Map<dynamic, dynamic>>> _fetchJobs(int length) async {
   }
 
 ''';
+  final bucketsOfJson =
+      buckets.map((Bucket bucket) => bucket.toJson()).toList();
 
   final QueryOptions options = QueryOptions(
     document: gql(query),
     variables: <String, dynamic>{
       "amount": length,
       "offset": length,
-      "filter": const {
+      "filter": {
         "name": "",
-        "buckets": [],
-        "games": [],
+        "buckets": bucketsOfJson,
+        "games": const [],
         "location": "",
         "isOnsiteOnly": false
       }
     },
   );
-
   final QueryResult queryResult = await client.query(options);
-
   List jobs = queryResult.data!["getJobPreviews"]["jobs"];
+  return jobs.map((e) => Job.fromJson(e)).toList();
+}
 
-  return jobs.map((e) => Job.fromJson(e).toJson()).toList();
+class JobStream {
+  final BehaviorSubject<List<Job>> _jobs = BehaviorSubject<List<Job>>();
+  final BehaviorSubject<bool> _isLoading = BehaviorSubject<bool>();
+  final BehaviorSubject<bool> _hasMore = BehaviorSubject<bool>();
+
+  Stream<List<Job>> get jobs => _jobs.stream;
+  Stream<bool> get isLoading => _isLoading.stream;
+
+  bool get hasMore => _hasMore.stream.value;
+
+  // set flipHasMore(bool value) => _hasMore..add(!_hasMore.value);
+
+  JobStream() {
+    _isLoading.add(false);
+    _jobs.add([]);
+    _hasMore.add(true);
+    refresh();
+  }
+
+  Future<void> refresh() {
+    return loadMore(clearCachedData: true);
+  }
+
+  Future<void> loadMore({bool clearCachedData = false}) {
+    if (clearCachedData) {
+      _hasMore.add(true);
+    }
+
+    if (_isLoading.value || !_hasMore.value) {
+      return Future.value();
+    }
+
+    _isLoading.add(true);
+
+    return _fetchJobs(10, []).then((List<Job> jobsData) {
+      _isLoading.add(false);
+      _jobs.add(_jobs.value..addAll(jobsData));
+      _hasMore.add(jobsData.length == 10);
+    });
+  }
+}
+
+class CurrentBuckets {
+  final BehaviorSubject<List<Bucket>> _buckets =
+      BehaviorSubject<List<Bucket>>.seeded([]);
+
+  Stream get stream$ => _buckets.stream;
+  List<Bucket> get buckets => _buckets.value;
+
+  addBucket(Bucket bucket) {
+    final List<Bucket> newBuckets = List.from(_buckets.value)..add(bucket);
+    _buckets.add(newBuckets);
+  }
 }

@@ -146,40 +146,10 @@ class Job {
         "jobId": jobId,
       },
     );
+
     return client.query(options).then((QueryResult result) {
       var rate = (result.data!["openJob"]["hourlyrate"]).toString();
-      print(rate);
-
-      if (rate.length < 15) {
-        return rate;
-      }
-      if (rate.contains("(")) {
-        rate.substring(0, rate.indexOf("(")).substring(0, 15);
-      }
-      if (rate.contains(",")) {
-        rate.substring(0, rate.indexOf(",")).substring(0, 15);
-      }
-
-      if (rate.toLowerCase().contains("volunteer") ||
-          rate.toLowerCase().contains("advertising")) {
-        return "Volunteer";
-      }
-
-      if (rate.contains("%") || rate.toLowerCase().contains("percentage")) {
-        return "Royalty";
-      }
-      if (rate.toLowerCase().contains("per hour") ||
-          rate.toLowerCase().contains("/hr") ||
-          rate.toLowerCase().contains("/hour")) {
-        return "${rate.substring(0, rate.indexOf("/"))}/hr";
-      }
-
-      // if rate contains $, remove everything that is not a $, a number or a -
-      if (rate.contains('\$')) {
-        return rate.replaceAll(RegExp("[^\\\$0-9-]"), "");
-      }
-
-      return rate.split(" ")[0];
+      return rate;
     });
   }
 

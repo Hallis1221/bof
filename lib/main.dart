@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:bof/widgets/jobs.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -14,11 +15,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      localizationsDelegates: const [
+        DefaultMaterialLocalizations.delegate,
+        DefaultCupertinoLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
+      debugShowCheckedModeBanner: false,
+      title: 'Bucket of Flutter',
       home: Scaffold(
           appBar: AppBar(
             //appbar widget on Scaffold
             title: const Text("Bucket of flutter!"), //title aof appbar
-            backgroundColor: Colors.redAccent, //background color of appbar
+            backgroundColor: Colors.blueAccent, //background color of appbar
           ),
           body: const JobList()),
     );
