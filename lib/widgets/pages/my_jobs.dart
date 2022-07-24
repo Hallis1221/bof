@@ -10,6 +10,10 @@ class MyJobs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        appBar: AppBar(
+          title: const Text("My Jobs"),
+          backgroundColor: Colors.blueAccent,
+        ),
         bottomNavigationBar: const GlobalBottomNavigation(),
         // Create one listtile for each id in MyJobsManager
         body: StreamBuilder<List<Job>>(
@@ -24,7 +28,7 @@ class MyJobs extends StatelessWidget {
               child: ListView.builder(
                 itemCount: snapshot.data?.length,
                 itemBuilder: (context, index) {
-                  return JobOverviewTile(job: snapshot.data![index]);
+                  return MyJobOverviewTile(job: snapshot.data![index]);
                 },
               ),
             );

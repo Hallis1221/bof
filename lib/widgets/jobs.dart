@@ -141,37 +141,99 @@ class JobOverviewTile extends StatelessWidget {
                 ),
               ],
             ),
-            child: ListTile(
-              title: Text(
-                job.title,
-              ),
-              subtitle: Text(job.company.name),
-              trailing: SizedBox(
-                width: 130.0,
-                child: Text(
-                  snapshot.data?.toString() ?? 'N/A',
-                  softWrap: false,
-                  textAlign: TextAlign.end,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              onLongPress: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(snapshot.data?.toString() ?? 'N/A'))),
-              onTap: () {
-                final Uri url =
-                    Uri.parse("https://bucketofcrabs.net/jobs/${job.id}");
-                launchUrl(
-                  url,
-                  mode: LaunchMode.inAppWebView,
-                ).then(
-                  (value) {
-                    if (!value) {
-                      throw Exception('Could not launch $url');
-                    }
-                  },
+            child: JobOverViewListtile(
+                job: job, payRange: snapshot.data?.toString() ?? 'N/A'));
+      },
+    );
+  }
+}
+
+class JobOverViewListtile extends StatelessWidget {
+  const JobOverViewListtile(
+      {Key? key, required this.job, required this.payRange})
+      : super(key: key);
+  final Job job;
+  final String payRange;
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(
+        job.title,
+      ),
+      subtitle: Text(job.company.name),
+      trailing: SizedBox(
+        width: 130.0,
+        child: Text(
+          payRange,
+          softWrap: false,
+          textAlign: TextAlign.end,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      onLongPress: () => ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(payRange))),
+      onTap: () {
+        final Uri url = Uri.parse("https://bucketofcrabs.net/jobs/${job.id}");
+        launchUrl(
+          url,
+          mode: LaunchMode.inAppWebView,
+        ).then(
+          (value) {
+            if (!value) {
+              throw Exception('Could not launch $url');
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
+class MyJobOverviewTile extends StatelessWidget {
+  const MyJobOverviewTile({Key? key, required this.job}) : super(key: key);
+
+  final Job job;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: job.getPayRange(job.id),
+      builder: (context, snapshot) {
+        return Slidable(
+            key: Key(job.id),
+            // The end action pane is the one at the right or the bottom side.
+            endActionPane: ActionPane(
+              motion: const ScrollMotion(),
+              // A pane can dismiss the Slidable.
+              dismissible: DismissiblePane(onDismissed: () {
+                myJobsManager.removeJobId(job.id);
+                jobStream.addJob(job);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('\'${job.title}\' removed from my jobs.'),
+                  ),
                 );
-              },
-            ));
+              }),
+              children: [
+                SlidableAction(
+                  onPressed: (BuildContext context) {
+                    myJobsManager.removeJobId(job.id);
+                    jobStream.addJob(job);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('\'${job.title}\' removed from my jobs.'),
+                      ),
+                    );
+                  },
+                  backgroundColor: const Color(0xFFFE4A49),
+                  foregroundColor: Colors.white,
+                  icon: Icons.delete,
+                  label: 'Delete',
+                ),
+              ],
+            ),
+            child: JobOverViewListtile(
+                job: job, payRange: snapshot.data?.toString() ?? 'N/A'));
       },
     );
   }

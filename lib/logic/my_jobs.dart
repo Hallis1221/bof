@@ -36,6 +36,10 @@ class MyJobsManager {
     _jobIds.add(
       List.from(_jobIds.value)..remove(jobId),
     );
+    _jobs.add(
+      List.from(_jobs.value)..removeWhere((job) => job.id == jobId),
+    );
+    save();
   }
 
   void removeAllJobs() {
