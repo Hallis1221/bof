@@ -1,5 +1,6 @@
 // ignore_for_file: avoid_print
 
+import 'package:bof/logic/navigator.dart' as NM;
 import 'package:bof/widgets/bucket_selector.dart';
 import 'package:bof/widgets/jobs.dart';
 import 'package:bof/widgets/pages/search.dart';
@@ -63,16 +64,21 @@ class GlobalBottomNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      items: const <BottomNavigationBarItem>[
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Browse',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bookmark),
-          label: 'My jobs',
-        ),
-      ],
+      currentIndex: NM.navigationManager.currentPageIndexValue,
+      onTap: (int index) {
+        if (index != NM.navigationManager.currentPageIndexValue) {
+          NM.navigationManager.setCurrentPageIndex(index);
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+            builder: (_) => NM.navigationManager.currentPage,
+          ));
+        }
+      },
+      items: NM.navigationManager.pages.map((NM.Page page) {
+        return BottomNavigationBarItem(
+          icon: Icon(page.icon),
+          label: page.title,
+        );
+      }).toList(),
     );
   }
 }

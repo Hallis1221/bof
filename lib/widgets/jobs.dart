@@ -1,5 +1,6 @@
 import 'package:bof/logic/job.dart';
 import 'package:bof/logic/jobs.dart';
+import 'package:bof/logic/my_jobs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -96,6 +97,7 @@ class JobOverviewTile extends StatelessWidget {
                   // An action can be bigger than the others.
                   onPressed: (BuildContext context) {
                     jobStream.removeJob(job);
+                    myJobsManager.addJobId(job.id);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text('Job saved!'),
                     ));

@@ -44,6 +44,10 @@ class JobStream {
     refresh();
   }
 
+  getJob(String jobId) async {
+    return await _getJobWithID(jobId);
+  }
+
   Future<void> refresh() {
     return loadMore(clearCachedData: true);
   }
@@ -107,6 +111,49 @@ class CurrentBuckets {
       ..removeWhere((Bucket b) => b.name == bucket.name);
     _buckets.add(newBuckets);
   }
+}
+
+Future<Job> _getJobWithID(String jobId) async {
+  const String query = r'''
+   query OpenJob($jobId: String!) {
+    openJob(jobId: $jobId) {
+      jobId
+      title
+      description
+      durationType
+      duration
+      hourlyrate
+      location
+      remoteOnly
+      onsiteOnly
+      isFilled
+      isClosed
+      createdAt
+      buckets {
+        name
+      }
+      games {
+        name
+      }
+    
+      company {
+        name
+      }
+    }
+  }
+''';
+
+  final QueryOptions options = QueryOptions(
+    document: gql(query),
+    variables: <String, dynamic>{
+      "jobId": jobId,
+    },
+  );
+
+  QueryResult result = await client.query(options);
+  final Map<String, dynamic>? data = result.data;
+  final Map<String, dynamic> openJob = data!['openJob'];
+  return Job.fromJson(openJob);
 }
 
 Future<List<Job>> _fetchJobs(
