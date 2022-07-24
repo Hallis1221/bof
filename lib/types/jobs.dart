@@ -9,6 +9,7 @@ import 'bucket.dart';
 
 CurrentBuckets currentBuckets = CurrentBuckets();
 JobStream jobStream = JobStream();
+CurrentSearchQuery currentSearchQuery = CurrentSearchQuery();
 
 class JobStream {
   final BehaviorSubject<List<Job>> _jobs = BehaviorSubject<List<Job>>();
@@ -51,11 +52,28 @@ class JobStream {
     return _fetchJobs(
       10,
       currentBuckets.buckets,
+      currentSearchQuery.searchQueryValue,
     ).then((List<Job> jobsData) {
       _isLoading.add(false);
       _jobs.add(_jobs.value..addAll(jobsData));
-      _hasMore.add(jobsData.length == 10);
+      _hasMore.add(jobsData.length >= 10);
     });
+  }
+}
+
+class CurrentSearchQuery {
+  final BehaviorSubject<String> _searchQuery = BehaviorSubject<String>();
+
+  Stream<String> get stream$ => _searchQuery.stream;
+
+  String get searchQueryValue => _searchQuery.value;
+
+  setSearchQuery(String value) {
+    _searchQuery.add(value);
+  }
+
+  CurrentSearchQuery() {
+    _searchQuery.add('');
   }
 }
 
@@ -81,7 +99,8 @@ class CurrentBuckets {
   }
 }
 
-Future<List<Job>> _fetchJobs(int length, List<Bucket> buckets) async {
+Future<List<Job>> _fetchJobs(
+    int length, List<Bucket> buckets, String searchQuery) async {
   const String query = r'''
   query GetJobPreviews($amount: Int!, $offset: Int!, $filter: GetJobsFilterInput) {
     getJobPreviews(amount: $amount, offset: $offset, filter: $filter) {
@@ -126,16 +145,16 @@ Future<List<Job>> _fetchJobs(int length, List<Bucket> buckets) async {
     document: gql(query),
     variables: <String, dynamic>{
       "amount": length,
-      "offset": length,
+      "offset": 0,
       "filter": {
-        "name": "",
+        "name": searchQuery,
         "buckets": bucketsOfJson,
         "games": const [],
         "location": "",
-        "isOnsiteOnly": false
       }
     },
   );
+  print(options.variables);
   final QueryResult queryResult = await client.query(options);
   List jobs = queryResult.data!["getJobPreviews"]["jobs"];
   return jobs.map((e) => Job.fromJson(e)).toList();
