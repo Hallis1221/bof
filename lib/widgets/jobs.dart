@@ -87,6 +87,7 @@ class JobOverviewTile extends StatelessWidget {
               // A pane can dismiss the Slidable.
               dismissible: DismissiblePane(onDismissed: () {
                 jobStream.removeJob(job);
+                myJobsManager.addJobId(job.id);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('Job saved!'),
                 ));

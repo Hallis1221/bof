@@ -54,13 +54,12 @@ class MyJobsManager {
 
   Future<void> convertToJobs() async {
     _isLoading.add(true);
-
+    List<Job> newJobs = [];
     for (var jobId in jobIdsValue) {
       Job job = await jobStream.getJob(jobId);
-      _jobs.add(
-        List.from(_jobs.value)..add(job),
-      );
+      newJobs.add(job);
     }
+    _jobs.add(newJobs);
     _isLoading.add(false);
   }
 

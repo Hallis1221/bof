@@ -63,11 +63,9 @@ class JobStream {
 
     _isLoading.add(true);
 
-    return _fetchJobs(
-      10,
-      currentBuckets.buckets,
-      currentSearchQuery.searchQueryValue,
-    ).then((List<Job> jobsData) {
+    return _fetchJobs(10, currentBuckets.buckets,
+            currentSearchQuery.searchQueryValue, _jobs.value.length)
+        .then((List<Job> jobsData) {
       _isLoading.add(false);
       _jobs.add(_jobs.value..addAll(jobsData));
       _hasMore.add(jobsData.length >= 10);
@@ -157,7 +155,7 @@ Future<Job> _getJobWithID(String jobId) async {
 }
 
 Future<List<Job>> _fetchJobs(
-    int length, List<Bucket> buckets, String searchQuery) async {
+    int length, List<Bucket> buckets, String searchQuery, int offset) async {
   const String query = r'''
   query GetJobPreviews($amount: Int!, $offset: Int!, $filter: GetJobsFilterInput) {
     getJobPreviews(amount: $amount, offset: $offset, filter: $filter) {
@@ -202,7 +200,7 @@ Future<List<Job>> _fetchJobs(
     document: gql(query),
     variables: <String, dynamic>{
       "amount": length,
-      "offset": 0,
+      "offset": offset,
       "filter": {
         "name": searchQuery,
         "buckets": bucketsOfJson,
