@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:bof/graphql/client.dart';
-import 'package:bof/types/job.dart';
+import 'package:bof/logic/job.dart';
 import 'package:graphql/client.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -31,6 +31,16 @@ class JobStream {
     _isLoading.add(false);
     _jobs.add([]);
     _hasMore.add(true);
+    refresh();
+  }
+
+  removeJob(Job job) {
+    _jobs.value.remove(job);
+    refresh();
+  }
+
+  addJob(Job job) {
+    _jobs.value.add(job);
     refresh();
   }
 
